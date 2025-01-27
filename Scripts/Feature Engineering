@@ -1,0 +1,64 @@
+import pandas as pd
+
+# Load combined dataset
+df = pd.read_csv('combined_filtered_data.csv')
+
+# Convert FL_DATE to datetime format 
+df['FL_DATE'] = pd.to_datetime(df['FL_DATE'], errors='coerce')
+
+print(f"Number of NaT values in FL_DATE: {df['FL_DATE'].isna().sum()}")
+
+# Convert time columns to datetime by combining FL_DATE with time strings
+for time_col in ['DEP_TIME', 'ARR_TIME', 'CRS_DEP_TIME', 'CRS_ARR_TIME']:
+    if time_col in df.columns:
+        df[time_col] = pd.to_datetime(
+            df['FL_DATE'].astype(str) + ' ' + df[time_col], errors='coerce'
+        )
+
+# Drop rows with invalid times (optional, based on analysis requirements)
+df = df.dropna(subset=['DEP_TIME', 'ARR_TIME'])
+
+# Extract departure hour
+df['DEP_HOUR'] = df['DEP_TIME'].dt.hour
+
+# Define and encode peak hours (7-9am and 4-7pm)
+peak_hours = list(range(7, 10)) + list(range(16, 19))
+df['PEAK_HOUR_INDICATOR'] = df['DEP_HOUR'].apply(lambda x: 1 if x in peak_hours else 0)
+
+# Extracting days of the week (0 = Monday, 6 = Sunday) 
+df['DAY_OF_WEEK'] = df['FL_DATE'].dt.dayofweek
+
+# Extracting months (1 = January, 12 = December)
+df['MONTH'] = df['FL_DATE'].dt.month
+
+# Weekend indicator (1 = Saturday / Sunday, 0 = M-F)
+df['WEEKEND_INDICATOR'] = df['DAY_OF_WEEK'].apply(lambda x: 1 if x >= 5 else 0)
+
+# Creating delay categories 
+def cat_delay(delay):
+    if pd.isnull(delay):
+        return 'No Data'
+    elif delay < 0: 
+        return 'Early Departure'
+    elif delay <= 15:
+        return '0-15 min'
+    elif delay <= 30: 
+        return '15-30 min'
+    else: 
+        return '30+ min'
+    
+# Apply function to data 
+df['DEP_DELAY_CATEGORY'] = df['DEP_DELAY'].apply(cat_delay)
+df['ARR_DELAY_CATEGORY'] = df['ARR_DELAY'].apply(cat_delay)
+
+# Encode CANCELLATION_CODE variable  
+cancellation_dict = {'A': 1, 'B': 2, 'C': 3, 'D': 4}
+df['CANCELLATION_REASON_CODE'] = df['CANCELLATION_CODE'].map(cancellation_dict)
+
+# Derive traffic volume using hourly bins
+df['TRAFFIC_VOLUME'] = df.groupby(df['DEP_TIME'].dt.floor('h'))['DEP_TIME'].transform('count')
+
+# Save the final dataset
+df.to_csv('new_features_data.csv', index=False)
+
+print("Feature engineering completed and saved to 'new_features_data.csv'")
