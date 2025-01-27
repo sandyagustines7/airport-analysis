@@ -1,0 +1,131 @@
+# Load data 
+import pandas as pd 
+
+df = pd.read_csv('new_features_data.csv')
+# pd.set_option('display.max_columns', None) # Show all columns 
+# pd.set_option('display.max_rows', 50) # Set number of rows to display 
+# print(df.head(50))
+
+# Define export function 
+def export_to_csv(dataframe, filename):
+    try:
+        dataframe.to_csv(filename, index=False)
+        print(f"Exported {filename} successfully!")
+    except Exception as e:
+        print(f"Failed to export {filename}: {e}")
+
+# Summary Statistics
+
+# 1. Calculate flight volume
+daily_flight_vol = df.groupby('DAY_OF_WEEK')['DEP_TIME'].count().reset_index()
+daily_flight_vol.columns = ['Day of Week (0 = Mon, 6 = Sun)', 'Flight Count']
+
+hourly_flight_vol = df.groupby('DEP_HOUR')['DEP_TIME'].count().reset_index()
+hourly_flight_vol.columns = ['Hour', 'Flight Count']
+
+monthly_flight_vol = df.groupby('MONTH')['DEP_TIME'].count().reset_index()
+monthly_flight_vol.columns = ['Month', 'Flight Count']
+
+print("Monthly Flight Volume:\n", monthly_flight_vol)
+print("\nDaily Flight Volume:\n", daily_flight_vol)
+print("\nHourly Flight Volume:\n", hourly_flight_vol)
+
+# 2. Delay Statistics 
+delay_stats = df[['DEP_DELAY', 'ARR_DELAY']].describe()
+
+# Average Delays per Hour 
+delays_by_hour = df.groupby('DEP_HOUR')[['DEP_DELAY', 'ARR_DELAY']].mean().reset_index()
+delays_by_hour.columns = ['Hour', 'Avg. Dep Delay', 'Avg Arr Delay']
+
+# Delay Categories 
+delay_cat = df['DEP_DELAY_CATEGORY'].value_counts(normalize=True).reset_index()
+delay_cat.columns = ['Delay Category', 'Proportion']
+
+print("\nDelay Statistics:\n", delay_stats)
+print("\nAverage Delays by Hour:\n", delays_by_hour)
+print("\nDelay Categories:\n", delay_cat)
+
+# 3. Traffic Volume Summary 
+traffic_summary = df.groupby('DEP_HOUR')['TRAFFIC_VOLUME'].mean().reset_index()
+traffic_summary.columns = ['Hour', 'Avg Traffic Volume']
+
+print("\nTraffic Volume Summary:\n", traffic_summary)
+
+# 4. Cancellations and Diversions 
+cancellations = df['CANCELLED'].value_counts().reset_index()
+cancellations.columns = ['Cancelled (0 = No, 1 = Yes)', 'Count']
+
+diverted_flights = df['DIVERTED'].value_counts().reset_index()
+diverted_flights.columns = ['Diverted (0 = No, 1 = Yes)', 'Count']
+
+cancellation_reasons = df['CANCELLATION_REASON_CODE'].value_counts().reset_index()
+cancellation_reasons.columns = ['Cancellation Reason Code', 'Count']
+
+print("\nCancellations:\n", cancellations)
+print("\nDiversions:\n", diverted_flights)
+print("\nCancellation Reasons:\n", cancellation_reasons)
+
+# 5. Peak Hour Flights 
+
+# Total flights during peak vs. non-peak hours
+peak_hour_flight_count = df['PEAK_HOUR_INDICATOR'].value_counts().reset_index()
+peak_hour_flight_count.columns = ['Peak Hour (1 = Yes, 0 = No)', 'Flight Count']
+
+# Average delays during peak vs. non-peak hours
+peak_hour_delay_stats = df.groupby('PEAK_HOUR_INDICATOR')[['DEP_DELAY', 'ARR_DELAY']].mean().reset_index()
+peak_hour_delay_stats.columns = ['Peak Hour (1 = Yes, 0 = No)', 'Avg Dep Delay', 'Avg Arr Delay']
+
+# Traffic volume during peak vs. non-peak hours
+peak_hour_traffic = df.groupby('PEAK_HOUR_INDICATOR')['TRAFFIC_VOLUME'].mean().reset_index()
+peak_hour_traffic.columns = ['Peak Hour (1 = Yes, 0 = No)', 'Avg Traffic Volume']
+
+print("\nPeak Hour Flight Count:\n", peak_hour_flight_count)
+print("\nPeak Hour Delay Stats:\n", peak_hour_delay_stats)
+print("\nPeak Hour Traffic Volume:\n", peak_hour_traffic)
+
+# 6. Weekend Flights 
+
+# Total flights on weekends vs. weekdays
+weekend_flight_count = df['WEEKEND_INDICATOR'].value_counts().reset_index()
+weekend_flight_count.columns = ['Weekend (1 = Yes, 0 = No)', 'Flight Count']
+
+# Average delays on weekends vs. weekdays
+weekend_delay_stats = df.groupby('WEEKEND_INDICATOR')[['DEP_DELAY', 'ARR_DELAY']].mean().reset_index()
+weekend_delay_stats.columns = ['Weekend (1 = Yes, 0 = No)', 'Avg Dep Delay', 'Avg Arr Delay']
+
+# Traffic volume on weekends vs. weekdays
+weekend_traffic = df.groupby('WEEKEND_INDICATOR')['TRAFFIC_VOLUME'].mean().reset_index()
+weekend_traffic.columns = ['Weekend (1 = Yes, 0 = No)', 'Avg Traffic Volume']
+
+print("\nWeekend Flight Count:\n", weekend_flight_count)
+print("\nWeekend Delay Stats:\n", weekend_delay_stats)
+print("\nWeekend Traffic Volume:\n", weekend_traffic)
+
+# Group by both indicators
+combined_stats = df.groupby(['PEAK_HOUR_INDICATOR', 'WEEKEND_INDICATOR'])[['DEP_DELAY', 'ARR_DELAY', 'TRAFFIC_VOLUME']].mean().reset_index()
+combined_stats.columns = ['Peak Hour (1 = Yes, 0 = No)', 'Weekend (1 = Yes, 0 = No)', 'Avg Dep Delay', 'Avg Arr Delay', 'Avg Traffic Volume']
+
+print("\nCombined Stats (Peak Hour & Weekend):\n", combined_stats)
+
+# Exporting results to csv for Tableau 
+summary_stats = {
+    'daily_flight_volume.csv': daily_flight_vol,
+    'hourly_flight_volume.csv': hourly_flight_vol,
+    'monthly_flight_volume.csv': monthly_flight_vol,
+    'delays_by_hour.csv': delays_by_hour,
+    'delay_categories.csv': delay_cat,
+    'traffic_summary.csv': traffic_summary,
+    'cancellations.csv': cancellations,
+    'diverted_flights.csv': diverted_flights,
+    'cancellation_reasons.csv': cancellation_reasons,
+    'peak_hour_flight_count.csv': peak_hour_flight_count,
+    'peak_hour_delay_stats.csv': peak_hour_delay_stats,
+    'peak_hour_traffic.csv': peak_hour_traffic,
+    'weekend_flight_count.csv': weekend_flight_count,
+    'weekend_delay_stats.csv': weekend_delay_stats,
+    'weekend_traffic.csv': weekend_traffic,
+    'combined_peak_weekend_stats.csv': combined_stats
+}
+
+for filename, dataframe in summary_stats.items():
+    export_to_csv(dataframe, filename)
