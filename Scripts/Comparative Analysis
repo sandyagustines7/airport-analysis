@@ -1,0 +1,50 @@
+import pandas as pd 
+
+# Load dataset 
+df = pd.read_csv('new_features_data.csv')
+
+# Delay Summary Statistics 
+def delay_summary(df, group_by_cols): 
+    summary = df.groupby(group_by_cols).agg(
+        avg_dep_delay = ('DEP_DELAY', 'mean'),
+        avg_arr_delay = ('ARR_DELAY', 'mean'),
+        total_flights = ('FL_DATE', 'count'),
+        delayed_flights = ('DEP_DELAY', lambda x: (x >= 15).sum()), # Delayed flights >= 15 min 
+        high_delayed_flights = ('DEP_DELAY', lambda x: (x > 30).sum()) # Delayed flights > 30 min
+    ).reset_index()
+    summary['delay_rate'] = summary['delayed_flights'] / summary['total_flights']
+    summary['high_delay_rate'] = summary['high_delayed_flights'] / summary['total_flights']
+    return summary
+
+# Time columns for grouping 
+df['YEAR'] = pd.to_datetime(df['FL_DATE']).dt.year
+df['MONTH'] = pd.to_datetime(df['FL_DATE']).dt.month
+df['DAY'] = pd.to_datetime(df['FL_DATE']).dt.date
+
+# 1. Airport-level Delay Summaries 
+# Yearly Basis 
+yearly_airport_summary = delay_summary(df, ['YEAR', 'ORIGIN'])
+yearly_airport_summary.to_csv('yearly_airport_delay_summary.csv', index=False)
+
+# Monthly Basis 
+monthly_airport_summary = delay_summary(df, ['YEAR', 'MONTH', 'ORIGIN'])
+monthly_airport_summary.to_csv('monthly_airport_delay_summary.csv', index=False)
+
+# Daily Basis 
+daily_airport_summary = delay_summary(df, ['DAY', 'ORIGIN'])
+daily_airport_summary.to_csv('daily_airport_delay_summary.csv', index=False)
+
+#2. Airline-level Delay Summaries 
+# Yearly Basis
+yearly_airline_summary = delay_summary(df, ['YEAR', 'ORIGIN', 'OP_CARRIER'])
+yearly_airline_summary.to_csv('yearly_airline_delay_summary.csv', index=False)
+
+# Monthly Basis 
+monthly_airline_summary = delay_summary(df, ['YEAR', 'MONTH', 'ORIGIN', 'OP_CARRIER'])
+monthly_airline_summary.to_csv('monthly_airline_delay_summary.csv', index=False)
+
+# Daily Basis 
+daily_airline_summary = delay_summary(df, ['DAY', 'ORIGIN', 'OP_CARRIER'])
+daily_airline_summary.to_csv('daily_airline_delay_summary.csv', index=False)
+
+print("Separate delay statistics for airports and airlines saved as CSV files.")
