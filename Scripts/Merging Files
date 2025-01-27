@@ -1,0 +1,39 @@
+import pandas as pd
+import glob
+import os
+
+# Specify the directory where your processed files are stored
+input_directory = './processed_files'
+output_file = './combined_filtered_data.csv'  # Change to .xlsx if you prefer Excel output
+
+def combine_files(input_directory, output_file):
+    # Ensure that the input directory exists
+    if not os.path.exists(input_directory):
+        print(f"Error: The directory {input_directory} does not exist.")
+        return
+
+    # Find all processed CSV files in the specified directory
+    csv_files = glob.glob(os.path.join(input_directory, '*.csv'))
+    
+    # Check if any CSV files were found
+    if not csv_files:
+        print(f"No CSV files found in the directory {input_directory}.")
+        return
+
+    print(f"Combining the following files: {csv_files}")
+    
+    # Read and concatenate all CSV files into one DataFrame
+    combined_df = pd.concat((pd.read_csv(file) for file in csv_files), ignore_index=True)
+    
+    # Ensure FL_DATE is in datetime format
+    combined_df['FL_DATE'] = pd.to_datetime(combined_df['FL_DATE'], errors='coerce')
+
+    # Sort the combined DataFrame by FL_DATE
+    combined_df.sort_values(by='FL_DATE', inplace=True)
+    
+    # Save the combined DataFrame to a CSV file
+    combined_df.to_csv(output_file, index=False)
+    print(f"All files combined and sorted into {output_file}")
+
+# Run the function to combine and sort the files
+combine_files(input_directory, output_file)
