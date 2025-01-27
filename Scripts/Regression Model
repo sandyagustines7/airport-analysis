@@ -1,0 +1,44 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from xgboost import XGBRegressor
+
+# Load processed features, target, and feature importance
+X_final = pd.read_csv('processed_features.csv')
+y = pd.read_csv('processed_target.csv').squeeze("columns")
+importance_df = pd.read_csv('feature_importance.csv')
+
+# Extract the top features based on importance
+top_features = importance_df['Feature'].head(10).tolist()
+print(f"Top Features Selected for Gradient Boosting: {top_features}")
+
+# Filter the top features for Gradient Boosting
+X_gb = X_final[top_features]
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X_gb, y, test_size=0.2, random_state=42)
+
+# Train the Gradient Boosting model
+model = XGBRegressor(
+    n_estimators=50,
+    learning_rate=0.1,
+    max_depth=6,
+    random_state=42
+)
+model.fit(X_train, y_train)
+
+# Evaluate the Gradient Boosting model
+y_pred = model.predict(X_test)
+
+mae = mean_absolute_error(y_test, y_pred)
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"Gradient Boosting Model Performance:\nMAE: {mae}\nMSE: {mse}\nR²: {r2}")
+
+from xgboost import plot_importance
+import matplotlib.pyplot as plt
+
+plot_importance(model)
+plt.title("Feature Importance in Gradient Boosting")
+plt.show()
